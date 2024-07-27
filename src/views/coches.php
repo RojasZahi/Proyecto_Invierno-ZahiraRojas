@@ -45,11 +45,14 @@
     </nav>
     <div class="container">
         <h1 class="mt-5">Lista de Coches Registrados</h1>
+
         <div class="mb-3">
             <a href="registro_inicial.php" class="btn btn-secondary">Ir Registro Inicial</a>
             <a href="agregar.php" class="btn btn-success">Agregar Coche</a>
+            <button id="export-pdf" class="btn btn-danger">Exportar a PDF</button>
         </div>
-        <table class="table table-bordered">
+
+        <table id="coches-table" class="table table-bordered">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -169,6 +172,8 @@
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.3.2/jspdf.min.js"></script>
     <script>
         function mostrarFormulario(id) {
             var formulario = document.getElementById('formulario-' + id);
@@ -182,58 +187,57 @@
         function actualizarTablaVueltas(id, tiempoVuelta, velocidad) {
             var tablaVueltas = document.getElementById('vueltas-' + id).querySelector('tbody');
             var filas = tablaVueltas.getElementsByTagName('tr');
-            var tiempoAcumulado = 0;
+            var ultimaFila = filas[filas.length - 1];
+            var ultimaVuelta = parseInt(ultimaFila.cells[3].innerText);
+            var tiempoAcumulado = ultimaFila.cells[8].innerText;
 
-            // Calcular el Tiempo Acumulado
-            for (var i = 0; i < filas.length; i++) {
-                var fila = filas[i];
-                var tiempo = parseFloat(fila.cells[6].innerText);
-                if (!isNaN(tiempo)) {
-                    tiempoAcumulado += tiempo;
-                }
-            }
-
-            // Crear una nueva fila
             var nuevaFila = document.createElement('tr');
             nuevaFila.innerHTML = `
-                <td></td>
                 <td>${id}</td>
-                <td>0</td> <!-- Asume que no se tiene el ID de la carrera en este caso -->
-                <td>${filas.length + 1}</td>
+                <td>${id}</td>
+                <td>${ultimaFila.cells[2].innerText}</td>
+                <td>${ultimaVuelta + 1}</td>
                 <td>${new Date().toLocaleTimeString()}</td>
-                <td>${new Date(new Date().getTime() + tiempoVuelta * 3600 * 1000).toLocaleTimeString()}</td>
+                <td>${new Date().toLocaleTimeString()}</td>
                 <td>${tiempoVuelta}</td>
                 <td>${velocidad}</td>
-                <td>${(tiempoAcumulado + parseFloat(tiempoVuelta)).toFixed(2)}</td>
+                <td>${tiempoAcumulado}</td>
             `;
             tablaVueltas.appendChild(nuevaFila);
         }
 
         function calcularTiempo(event, id) {
             event.preventDefault();
+            var distancia = document.getElementById('distancia-' + id).value;
+            var velocidad = document.getElementById('velocidad-' + id).value;
+            var tiempoVuelta = (distancia / velocidad).toFixed(2);
 
-            const distancia = parseFloat(document.getElementById('distancia-' + id).value);
-            const velocidad = parseFloat(document.getElementById('velocidad-' + id).value);
+            var resultado = document.getElementById('resultado-' + id);
+            resultado.innerHTML = `
+                <p>Tiempo de Vuelta: ${tiempoVuelta} horas</p>
+                <p>Velocidad: ${velocidad} km/h</p>
+            `;
 
-            if (distancia > 0 && velocidad > 0) {
-                const tiempo = distancia / velocidad;
-                document.getElementById('resultado-' + id).innerText = `El tiempo necesario es: ${tiempo.toFixed(2)} horas.`;
-
-                // Calcular el tiempo de vuelta y actualizar la tabla
-                actualizarTablaVueltas(id, tiempo.toFixed(2), velocidad.toFixed(2));
-            } else {
-                document.getElementById('resultado-' + id).innerText = 'Por favor ingrese valores válidos.';
-            }
+            actualizarTablaVueltas(id, tiempoVuelta, velocidad);
         }
 
         function mostrarVueltas(id) {
-            var vueltas = document.getElementById('vueltas-' + id);
-            if (vueltas.style.display === 'none' || vueltas.style.display === '') {
-                vueltas.style.display = 'block';
+            var vueltasTabla = document.getElementById('vueltas-' + id);
+            if (vueltasTabla.style.display === 'none' || vueltasTabla.style.display === '') {
+                vueltasTabla.style.display = 'block';
             } else {
-                vueltas.style.display = 'none';
+                vueltasTabla.style.display = 'none';
             }
         }
+
+        document.getElementById('export-pdf').addEventListener('click', function() {
+            html2canvas(document.getElementById('coches-table')).then(function(canvas) {
+                var imgData = canvas.toDataURL('image/png');
+                var doc = new jsPDF();
+                doc.addImage(imgData, 'PNG', 10, 10);
+                doc.save('coches.pdf');
+            });
+        });
     </script>
 </body>
 </html>
